@@ -30,4 +30,7 @@ if __name__ == "__main__":
                 "croudtech-lambda-helper=croudtech_python_aws_lambda_helpers.cli:cli"
             ],
         },
+        packages=[
+            "croudtech_python_aws_lambda_helpers"
+        ]
     )
