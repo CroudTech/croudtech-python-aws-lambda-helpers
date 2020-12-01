@@ -6,6 +6,7 @@ from collections import MutableMapping
 from loguru import logger
 import re
 from click._compat import open_stream
+import click
 
 def convert_flatten(d, parent_key="", sep="_"):
     items = []
@@ -24,7 +25,7 @@ class SsmConfig:
         self,
         environment_name,
         app_name,
-        click,
+        click=click,
         ssm_prefix="/lambda",
         region="eu-west-2",
         include_common=True,
