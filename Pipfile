@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 click = "*"
-boto3 = "*"
+boto3 = "==1.16.28"
 bson = "*"
 pyaml = "*"
 pyyaml = "*"
