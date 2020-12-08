@@ -32,7 +32,7 @@ def cli(ctx, debug):
 @click.option(
     "--ignore-common", default=True, is_flag=True, help="Include shared variables"
 )
-@click.option("--output-format", default="json")
+@click.option("--output-format", default="json", type=click.Choice(['json', 'yaml', 'environment'])
 def get_parameters(
     ctx, environment_name, app_name, ssm_prefix, region, ignore_common, output_format
 ):
@@ -44,6 +44,7 @@ def get_parameters(
         include_common=ignore_common,
         click=click,
     )
+    output = "Invalid output format"
 
     if output_format == "json":
         output = json.dumps(ssm_config.params_to_nested_dict(), indent=2)
