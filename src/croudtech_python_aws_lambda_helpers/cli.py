@@ -32,7 +32,7 @@ def cli(ctx, debug):
 @click.option(
     "--ignore-common", default=True, is_flag=True, help="Include shared variables"
 )
-@click.option("--output-format", default="json", type=click.Choice(['json', 'yaml', 'environment'])
+@click.option("--output-format", default="json", type=click.Choice(['json', 'yaml', 'environment']))
 def get_parameters(
     ctx, environment_name, app_name, ssm_prefix, region, ignore_common, output_format
 ):
