@@ -71,7 +71,7 @@ class SsmConfig:
                     parameter_name = parameter["Name"].replace(path, "")
                     parameters[parameter_name] = parameter["Value"]
         except botocore.exceptions.NoCredentialsError as err:
-            logger.error("Failed to fetch parameters. Could not find AWS credentials")
+            logger.info("Failed to fetch parameters. Could not find AWS credentials")
             return {}
         return parameters
 
