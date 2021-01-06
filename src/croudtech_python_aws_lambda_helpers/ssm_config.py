@@ -3,7 +3,7 @@ import json
 import os
 import yaml
 from collections import MutableMapping
-from loguru import logger
+import logging
 import re
 from click._compat import open_stream
 import click
@@ -70,8 +70,11 @@ class SsmConfig:
                 for parameter in response["Parameters"]:
                     parameter_name = parameter["Name"].replace(path, "")
                     parameters[parameter_name] = parameter["Value"]
+        except botocore.exceptions.ClientError as err:
+            logging.info("Failed to fetch parameters. Invalid token")
+            return {}
         except botocore.exceptions.NoCredentialsError as err:
-            logger.info("Failed to fetch parameters. Could not find AWS credentials")
+            logging.info("Failed to fetch parameters. Could not find AWS credentials")
             return {}
         return parameters
 
@@ -100,7 +103,7 @@ class SsmConfig:
             env_name = self.parameter_name_to_underscore(parameter)
             os.environ[env_name] = value
             strings.append("%s=%s" % (env_name, value))
-            logger.info("Imported %s from SSM to env var %s" % (parameter, env_name))
+            logging.info("Imported %s from SSM to env var %s" % (parameter, env_name))
 
         return "\n".join(strings)
 
