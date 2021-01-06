@@ -7,7 +7,7 @@ from loguru import logger
 import re
 from click._compat import open_stream
 import click
-import botocore.exceptions
+import botocore
 
 def convert_flatten(d, parent_key="", sep="_"):
     items = []
@@ -70,7 +70,7 @@ class SsmConfig:
                 for parameter in response["Parameters"]:
                     parameter_name = parameter["Name"].replace(path, "")
                     parameters[parameter_name] = parameter["Value"]
-        except boto3.exceptions.NoCredentialsError as err:
+        except botocore.exceptions.NoCredentialsError as err:
             logger.error("Failed to fetch parameters. Could not find AWS credentials")
         return parameters
 
