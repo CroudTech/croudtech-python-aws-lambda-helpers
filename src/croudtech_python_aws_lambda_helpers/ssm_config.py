@@ -7,6 +7,7 @@ from loguru import logger
 import re
 from click._compat import open_stream
 import click
+import botocore.exceptions
 
 def convert_flatten(d, parent_key="", sep="_"):
     items = []
@@ -60,14 +61,17 @@ class SsmConfig:
         return parameters
 
     def fetch_parameters(self, path):
-        response = self.ssm_client.get_parameters_by_path(
-            Path=path, Recursive=True, WithDecryption=True
-        )
-        parameters = {}
-        if "Parameters" in response:
-            for parameter in response["Parameters"]:
-                parameter_name = parameter["Name"].replace(path, "")
-                parameters[parameter_name] = parameter["Value"]
+        try:
+            response = self.ssm_client.get_parameters_by_path(
+                Path=path, Recursive=True, WithDecryption=True
+            )
+            parameters = {}
+            if "Parameters" in response:
+                for parameter in response["Parameters"]:
+                    parameter_name = parameter["Name"].replace(path, "")
+                    parameters[parameter_name] = parameter["Value"]
+        except boto3.exceptions.NoCredentialsError as err:
+            logger.error("Failed to fetch parameters. Could not find AWS credentials")
         return parameters
 
     def parameter_name_to_underscore(self, name):
@@ -97,7 +101,7 @@ class SsmConfig:
             strings.append("%s=%s" % (env_name, value))
             logger.info("Imported %s from SSM to env var %s" % (parameter, env_name))
 
-        return True
+        return "\n".join(strings)
 
     def delete_existing(self):
         parameters = self.get_parameters()
