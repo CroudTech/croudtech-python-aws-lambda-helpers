@@ -72,6 +72,7 @@ class SsmConfig:
                     parameters[parameter_name] = parameter["Value"]
         except botocore.exceptions.NoCredentialsError as err:
             logger.error("Failed to fetch parameters. Could not find AWS credentials")
+            return {}
         return parameters
 
     def parameter_name_to_underscore(self, name):
