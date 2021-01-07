@@ -8,6 +8,14 @@ import re
 from click._compat import open_stream
 import click
 import botocore
+import sys
+logger = logging.getLogger()
+logger.setLevel(getattr(logging, os.getenv('LOG_LEVEL', 'INFO')))
+handler = logging.StreamHandler()
+# handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 def convert_flatten(d, parent_key="", sep="_"):
     items = []
@@ -19,6 +27,12 @@ def convert_flatten(d, parent_key="", sep="_"):
         else:
             items.append((new_key, v))
     return dict(items)
+
+class Utils:
+    @staticmethod
+    def chunk_list(data, chunk_size):
+        for i in range(0, len(data), chunk_size):
+            yield data[i : i + chunk_size]
 
 
 class SsmConfig:
@@ -62,20 +76,36 @@ class SsmConfig:
 
     def fetch_parameters(self, path):
         try:
-            response = self.ssm_client.get_parameters_by_path(
-                Path=path, Recursive=True, WithDecryption=True
-            )
             parameters = {}
-            if "Parameters" in response:
-                for parameter in response["Parameters"]:
-                    parameter_name = parameter["Name"].replace(path, "")
-                    parameters[parameter_name] = parameter["Value"]
+            for parameter in self.fetch_paginated_parameters(path):
+                parameter_name = parameter["Name"].replace(path, "")
+                parameters[parameter_name] = parameter["Value"]
+
         except botocore.exceptions.ClientError as err:
-            logging.info("Failed to fetch parameters. Invalid token")
+            logger.info("Failed to fetch parameters. Invalid token")
             return {}
         except botocore.exceptions.NoCredentialsError as err:
-            logging.info("Failed to fetch parameters. Could not find AWS credentials")
+            logger.info("Failed to fetch parameters. Could not find AWS credentials")
             return {}
+        return parameters
+
+    def fetch_paginated_parameters(self, path):
+        parameters = []
+        fetch_next_page = True
+        api_parameters = {"Path": path, "Recursive": True, "WithDecryption": True}
+        while fetch_next_page:
+            response = self.ssm_client.get_parameters_by_path(
+                **api_parameters
+            )
+
+            if "Parameters" in response:
+                parameters = parameters + response['Parameters']
+            if "NextToken" in response:
+                api_parameters["NextToken"] = response["NextToken"]
+                fetch_next_page = True
+            else:
+                fetch_next_page = False
+
         return parameters
 
     def parameter_name_to_underscore(self, name):
@@ -103,7 +133,7 @@ class SsmConfig:
             env_name = self.parameter_name_to_underscore(parameter)
             os.environ[env_name] = value
             strings.append("%s=%s" % (env_name, value))
-            logging.info("Imported %s from SSM to env var %s" % (parameter, env_name))
+            logger.info("Imported %s from SSM to env var %s" % (parameter, env_name))
 
         return "\n".join(strings)
 
@@ -116,10 +146,11 @@ class SsmConfig:
 
         if len(paths) == 0:
             return False
-
-        response = self.ssm_client.delete_parameters(Names=paths)
-        for parameter in response["DeletedParameters"]:
-            self.info("Deleted parameter %s" % parameter)
+        path_chunks = Utils.chunk_list(paths, 10)
+        for chunk in path_chunks:
+            response = self.ssm_client.delete_parameters(Names=chunk)
+            for parameter in response["DeletedParameters"]:
+                self.info("Deleted parameter %s" % parameter)
         return True
 
     def put_values(self, input, encrypted, delete_first):
