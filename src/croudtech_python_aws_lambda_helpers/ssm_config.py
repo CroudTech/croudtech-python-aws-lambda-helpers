@@ -11,7 +11,7 @@ import botocore
 import sys
 logger = logging.getLogger()
 logger.setLevel(getattr(logging, os.getenv('LOG_LEVEL', 'INFO')))
-handler = logging.StreamHandler()
+handler = logging.StreamHandler(sys.stdout)
 # handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -80,12 +80,12 @@ class SsmConfig:
             for parameter in self.fetch_paginated_parameters(path):
                 parameter_name = parameter["Name"].replace(path, "")
                 parameters[parameter_name] = parameter["Value"]
-
+                logger.debug("Fetched parameters from AWS SSM.")
         except botocore.exceptions.ClientError as err:
-            logger.info("Failed to fetch parameters. Invalid token")
+            logger.debug("Failed to fetch parameters. Invalid token")
             return {}
         except botocore.exceptions.NoCredentialsError as err:
-            logger.info("Failed to fetch parameters. Could not find AWS credentials")
+            logger.debug("Failed to fetch parameters. Could not find AWS credentials")
             return {}
         return parameters
 
@@ -133,7 +133,7 @@ class SsmConfig:
             env_name = self.parameter_name_to_underscore(parameter)
             os.environ[env_name] = value
             strings.append("%s=%s" % (env_name, value))
-            logger.info("Imported %s from SSM to env var %s" % (parameter, env_name))
+            logger.debug("Imported %s from SSM to env var %s" % (parameter, env_name))
 
         return "\n".join(strings)
 
